@@ -18,7 +18,7 @@ class KeyVaultService
      *
      * @throws ValidationException
      */
-    public function store(User $user, string $rawKey, string $defaultModel = 'gemini-2.5-flash', ?string $ipAddress = null): ApiKey
+    public function store(User $user, string $rawKey, string $defaultModel = 'gemini-3.8-flash', ?string $ipAddress = null): ApiKey
     {
         $rawKey = trim($rawKey);
 

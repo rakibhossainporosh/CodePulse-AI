@@ -43,7 +43,7 @@ class DashboardController extends Controller
             'apiKeyStatus' => [
                 'has_key' => (bool) $user->apiKey?->is_active,
                 'key_hint' => $user->apiKey?->key_hint,
-                'default_model' => $user->apiKey?->default_model ?? 'gemini-2.5-flash',
+                'default_model' => $user->apiKey?->default_model ?? 'gemini-3.8-flash',
             ],
         ]);
     }

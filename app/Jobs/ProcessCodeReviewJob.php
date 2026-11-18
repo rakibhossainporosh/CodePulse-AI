@@ -60,7 +60,7 @@ class ProcessCodeReviewJob implements ShouldQueue
             return;
         }
 
-        $model = $this->review->model_used ?: ($user->apiKey?->default_model ?? 'gemini-2.5-flash');
+        $model = $this->review->model_used ?: ($user->apiKey?->default_model ?? 'gemini-3.8-flash');
         $focusAreas = $this->review->focus_areas ?: ['performance', 'security', 'bug', 'style'];
 
         // Request structured review from Gemini

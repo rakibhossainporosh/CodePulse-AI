@@ -95,7 +95,7 @@ class PhaseOneModelsTest extends TestCase
             'security_score' => 90,
             'maintainability_score' => 91,
             'tokens_used' => 420,
-            'model_used' => 'gemini-2.5-flash',
+            'model_used' => 'gemini-3.8-flash',
         ]);
 
         $finding = ReviewFinding::create([

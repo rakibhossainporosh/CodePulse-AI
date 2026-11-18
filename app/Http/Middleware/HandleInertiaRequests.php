@@ -37,7 +37,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
                 'has_api_key' => $user ? (bool) $user->apiKey?->is_active : false,
                 'api_key_hint' => $user ? $user->apiKey?->key_hint : null,
-                'default_model' => $user ? ($user->apiKey?->default_model ?? 'gemini-2.5-flash') : 'gemini-2.5-flash',
+                'default_model' => $user ? ($user->apiKey?->default_model ?? 'gemini-3.8-flash') : 'gemini-3.8-flash',
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

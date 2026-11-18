@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('api_keys', function (Blueprint $table) {
-            $table->string('default_model', 50)->default('gemini-2.5-flash')->after('key_hint');
+            $table->string('default_model', 50)->default('gemini-3.8-flash')->after('key_hint');
         });
     }
 

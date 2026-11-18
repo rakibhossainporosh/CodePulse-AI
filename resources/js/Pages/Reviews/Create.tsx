@@ -130,7 +130,7 @@ export default function Create({ projects: initialProjects, defaultModel, hasApi
         source_code: '',
         language: 'PHP',
         project_id: '',
-        model_used: defaultModel || 'gemini-2.5-flash',
+        model_used: defaultModel || 'gemini-3.8-flash',
         focus_areas: ['performance', 'security', 'bug', 'style'],
     });
 
@@ -462,10 +462,9 @@ export default function Create({ projects: initialProjects, defaultModel, hasApi
                                     onChange={(e) => setData('model_used', e.target.value)}
                                     className="mt-1 block w-full rounded-xl border-slate-200 bg-white py-2 text-sm text-slate-900 shadow-2xs focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                                 >
-                                    <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & recommended)</option>
-                                    <option value="gemini-2.5-pro">gemini-2.5-pro (Deep reasoning)</option>
-                                    <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                                    <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                    <option value="gemini-3.8-flash">gemini-3.8-flash (Recommended for Code & Performance)</option>
+                                    <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Fast & Lightweight)</option>
+                                    <option value="gemini-4-carbon">gemini-4-carbon (Deep Reasoning & Security)</option>
                                 </select>
                             </div>
                         </div>

@@ -29,7 +29,7 @@ class ReviewEngineTest extends TestCase
             'user_id' => $user->id,
             'encrypted_key' => Crypt::encryptString('AIzaSyValidDummyTestKey123456789012345'),
             'key_hint' => 'AIza...2345',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
             'is_active' => true,
             'last_verified_at' => now(),
         ]);
@@ -80,7 +80,7 @@ class ReviewEngineTest extends TestCase
             'language' => 'PHP',
             'source_code' => '<?php echo "Safe Code"; ?>',
             'focus_areas' => ['performance', 'security'],
-            'model_used' => 'gemini-2.5-flash',
+            'model_used' => 'gemini-3.8-flash',
         ]);
 
         $review = Review::where('user_id', $user->id)->first();
@@ -179,7 +179,7 @@ class ReviewEngineTest extends TestCase
             'language' => 'PHP',
             'source_code' => '<?php $input = $_GET["id"]; $res = DB::select("SELECT * FROM users WHERE id = " . $input);',
             'focus_areas' => ['performance', 'security', 'bug'],
-            'model_used' => 'gemini-2.5-flash',
+            'model_used' => 'gemini-3.8-flash',
             'status' => ReviewStatus::PENDING,
         ]);
 

@@ -27,7 +27,7 @@ class GeminiClient
         string $sourceCode,
         string $language,
         array $focusAreas,
-        string $model = 'gemini-2.5-flash'
+        string $model = 'gemini-3.8-flash'
     ): array {
         $endpoint = self::BASE_URL . '/' . $model . ':generateContent';
 

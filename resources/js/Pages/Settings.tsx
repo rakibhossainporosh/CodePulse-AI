@@ -63,7 +63,7 @@ export default function Settings({ apiKey, auditLogs }: Props) {
         reset,
     } = useForm({
         api_key: '',
-        default_model: apiKey?.default_model || 'gemini-2.5-flash',
+        default_model: apiKey?.default_model || 'gemini-3.8-flash',
     });
 
     // Form for quick model update
@@ -73,7 +73,7 @@ export default function Settings({ apiKey, auditLogs }: Props) {
         patch: patchModel,
         processing: modelProcessing,
     } = useForm({
-        default_model: apiKey?.default_model || 'gemini-2.5-flash',
+        default_model: apiKey?.default_model || 'gemini-3.8-flash',
     });
 
     const handleSaveKey = (e: React.FormEvent) => {
@@ -291,10 +291,9 @@ export default function Settings({ apiKey, auditLogs }: Props) {
                                             onChange={(e) => setData('default_model', e.target.value)}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm"
                                         >
-                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & Recommended)</option>
-                                            <option value="gemini-2.5-pro">gemini-2.5-pro (Deep Architecture & Reasoning)</option>
-                                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Recommended for Code & Performance)</option>
+                                            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Fast & Lightweight)</option>
+                                            <option value="gemini-4-carbon">gemini-4-carbon (Deep Reasoning & Security)</option>
                                         </select>
                                     </div>
 
@@ -342,10 +341,9 @@ export default function Settings({ apiKey, auditLogs }: Props) {
                                             onChange={(e) => setModelData('default_model', e.target.value)}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 text-sm"
                                         >
-                                            <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & recommended)</option>
-                                            <option value="gemini-2.5-pro">gemini-2.5-pro (In-depth analysis)</option>
-                                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                                            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                            <option value="gemini-3.8-flash">gemini-3.8-flash (Recommended for Code & Performance)</option>
+                                            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Fast & Lightweight)</option>
+                                            <option value="gemini-4-carbon">gemini-4-carbon (Deep Reasoning & Security)</option>
                                         </select>
                                     </div>
                                     <PrimaryButton

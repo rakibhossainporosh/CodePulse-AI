@@ -37,7 +37,7 @@ class KeyVaultSettingsTest extends TestCase
         Http::fake([
             'https://generativelanguage.googleapis.com/*' => Http::response([
                 'models' => [
-                    ['name' => 'models/gemini-2.5-flash'],
+                    ['name' => 'models/gemini-3.8-flash'],
                 ],
             ], 200),
         ]);
@@ -46,7 +46,7 @@ class KeyVaultSettingsTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => $rawKey,
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
         ]);
 
         $response->assertRedirect();
@@ -56,7 +56,7 @@ class KeyVaultSettingsTest extends TestCase
         $this->assertNotNull($apiKey);
         $this->assertEquals('AIza...7890', $apiKey->key_hint);
         $this->assertTrue($apiKey->is_active);
-        $this->assertEquals('gemini-2.5-flash', $apiKey->default_model);
+        $this->assertEquals('gemini-3.8-flash', $apiKey->default_model);
         $this->assertEquals($rawKey, Crypt::decryptString($apiKey->encrypted_key));
 
         // Audit log check
@@ -88,7 +88,7 @@ class KeyVaultSettingsTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => $rawKey,
-            'default_model' => 'gemini-2.5-pro',
+            'default_model' => 'gemini-4-carbon',
         ]);
 
         $response->assertRedirect();
@@ -98,7 +98,7 @@ class KeyVaultSettingsTest extends TestCase
         $this->assertNotNull($apiKey);
         $this->assertEquals('AQ.N...9876', $apiKey->key_hint);
         $this->assertTrue($apiKey->is_active);
-        $this->assertEquals('gemini-2.5-pro', $apiKey->default_model);
+        $this->assertEquals('gemini-4-carbon', $apiKey->default_model);
         $this->assertEquals($rawKey, Crypt::decryptString($apiKey->encrypted_key));
 
         Http::assertSent(function ($request) use ($rawKey) {
@@ -123,7 +123,7 @@ class KeyVaultSettingsTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => 'AIzaSyInvalidKeyThatFailsVerification00',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
         ]);
 
         $response->assertSessionHasErrors('api_key');
@@ -146,7 +146,7 @@ class KeyVaultSettingsTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => 'AIzaSyForbiddenPermissionKey0000000000',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
         ]);
 
         $response->assertSessionHasErrors('api_key');
@@ -176,7 +176,7 @@ class KeyVaultSettingsTest extends TestCase
             'user_id' => $user->id,
             'encrypted_key' => Crypt::encryptString($rawKey),
             'key_hint' => 'AIza...7890',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
             'is_active' => true,
         ]);
 
@@ -208,7 +208,7 @@ class KeyVaultSettingsTest extends TestCase
             'user_id' => $user->id,
             'encrypted_key' => Crypt::encryptString('AIzaSyValidFormatKeyLaterRevoked12345'),
             'key_hint' => 'AIza...2345',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
             'is_active' => true,
         ]);
 
@@ -237,7 +237,7 @@ class KeyVaultSettingsTest extends TestCase
             'user_id' => $user->id,
             'encrypted_key' => Crypt::encryptString('AIzaSyKeyToBeDeletedNow123456789012'),
             'key_hint' => 'AIza...9012',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
             'is_active' => true,
         ]);
 
@@ -262,17 +262,17 @@ class KeyVaultSettingsTest extends TestCase
             'user_id' => $user->id,
             'encrypted_key' => Crypt::encryptString('AIzaSyKeyForModelSwitch123456789012'),
             'key_hint' => 'AIza...9012',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
             'is_active' => true,
         ]);
 
         $response = $this->actingAs($user)->patch(route('settings.api-key.model'), [
-            'default_model' => 'gemini-2.5-pro',
+            'default_model' => 'gemini-4-carbon',
         ]);
 
         $response->assertRedirect();
         $apiKey->refresh();
-        $this->assertEquals('gemini-2.5-pro', $apiKey->default_model);
+        $this->assertEquals('gemini-4-carbon', $apiKey->default_model);
 
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $user->id,
@@ -291,7 +291,7 @@ class KeyVaultSettingsTest extends TestCase
         // First key (AIza format)
         $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => 'AIzaSyFirstOriginalKey12345678901111',
-            'default_model' => 'gemini-2.5-flash',
+            'default_model' => 'gemini-3.8-flash',
         ]);
 
         $this->assertEquals(1, ApiKey::where('user_id', $user->id)->count());
@@ -300,13 +300,13 @@ class KeyVaultSettingsTest extends TestCase
         // Replace with new AQ. format key
         $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => 'AQ.SecondReplacedKey99999999992222',
-            'default_model' => 'gemini-2.5-pro',
+            'default_model' => 'gemini-4-carbon',
         ]);
 
         $this->assertEquals(1, ApiKey::where('user_id', $user->id)->count());
         $updatedKey = ApiKey::where('user_id', $user->id)->first();
         $this->assertEquals('AQ.S...2222', $updatedKey->key_hint);
-        $this->assertEquals('gemini-2.5-pro', $updatedKey->default_model);
+        $this->assertEquals('gemini-4-carbon', $updatedKey->default_model);
         $this->assertEquals('AQ.SecondReplacedKey99999999992222', Crypt::decryptString($updatedKey->encrypted_key));
     }
 }

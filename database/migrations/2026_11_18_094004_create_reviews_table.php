@@ -24,7 +24,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('security_score')->nullable();
             $table->unsignedTinyInteger('maintainability_score')->nullable();
             $table->unsignedInteger('tokens_used')->default(0);
-            $table->string('model_used', 50)->default('gemini-2.5-flash');
+            $table->string('model_used', 50)->default('gemini-3.8-flash');
             $table->text('error_message')->nullable();
             $table->timestamps();
 

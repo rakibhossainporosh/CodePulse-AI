@@ -61,7 +61,7 @@ class ReviewController extends Controller
 
         return Inertia::render('Reviews/Create', [
             'projects' => $user->projects()->get(['id', 'name']),
-            'defaultModel' => $user->apiKey?->default_model ?? 'gemini-2.5-flash',
+            'defaultModel' => $user->apiKey?->default_model ?? 'gemini-3.8-flash',
             'hasApiKey' => (bool) $user->apiKey?->is_active,
         ]);
     }
@@ -84,7 +84,7 @@ class ReviewController extends Controller
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'focus_areas' => ['required', 'array', 'min:1'],
             'focus_areas.*' => ['string', 'in:performance,security,bug,style'],
-            'model_used' => ['nullable', 'string', 'in:gemini-2.5-flash,gemini-2.5-pro,gemini-1.5-flash,gemini-1.5-pro'],
+            'model_used' => ['nullable', 'string', 'in:gemini-3.8-flash,gemini-3.5-flash-lite,gemini-4-carbon'],
         ]);
 
         // If project_id provided, verify ownership
@@ -98,7 +98,7 @@ class ReviewController extends Controller
             }
         }
 
-        $model = $validated['model_used'] ?? ($user->apiKey->default_model ?? 'gemini-2.5-flash');
+        $model = $validated['model_used'] ?? ($user->apiKey->default_model ?? 'gemini-3.8-flash');
 
         $review = $user->reviews()->create([
             'project_id' => $validated['project_id'] ?? null,
