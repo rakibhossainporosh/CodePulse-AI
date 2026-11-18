@@ -251,7 +251,7 @@ export default function Settings({ apiKey, auditLogs }: Props) {
                                             name="api_key"
                                             value={data.api_key}
                                             className="block w-full pr-10 font-mono text-sm"
-                                            placeholder="AIzaSy..."
+                                            placeholder="AIzaSy... or AQ...."
                                             onChange={(e) => setData('api_key', e.target.value)}
                                             autoComplete="off"
                                         />

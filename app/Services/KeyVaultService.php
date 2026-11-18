@@ -28,10 +28,13 @@ class KeyVaultService
             ]);
         }
 
-        // Basic sanity check for Google Gemini API key format
-        if (! str_starts_with($rawKey, 'AIza') || strlen($rawKey) < 30) {
+        // Basic sanity check for Google Gemini API key format (accepts AIza or AQ.)
+        $isAIza = str_starts_with($rawKey, 'AIza') && strlen($rawKey) >= 30;
+        $isAQ = str_starts_with($rawKey, 'AQ.') && strlen($rawKey) >= 20;
+
+        if (! $isAIza && ! $isAQ) {
             throw ValidationException::withMessages([
-                'api_key' => 'Invalid Gemini API key format. A valid key starts with "AIza".',
+                'api_key' => 'Invalid Gemini API key format. A valid key starts with "AIza" or "AQ.".',
             ]);
         }
 
@@ -184,14 +187,16 @@ class KeyVaultService
     }
 
     /**
-     * Live ping to Google Gemini models.list endpoint with 10s timeout.
+     * Live ping to Google Gemini models.list endpoint with 10s timeout using x-goog-api-key header.
      */
     private function pingGeminiApi(string $rawKey): bool
     {
         try {
-            $response = Http::timeout(10)->get(self::GEMINI_MODELS_ENDPOINT, [
-                'key' => $rawKey,
-            ]);
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'x-goog-api-key' => $rawKey,
+                ])
+                ->get(self::GEMINI_MODELS_ENDPOINT);
 
             return $response->successful();
         } catch (\Exception $e) {

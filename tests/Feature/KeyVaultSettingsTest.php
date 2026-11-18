@@ -30,7 +30,7 @@ class KeyVaultSettingsTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_valid_api_key_storage_with_http_fake(): void
+    public function test_valid_api_key_storage_with_http_fake_using_x_goog_api_key_header(): void
     {
         $user = User::factory()->create();
 
@@ -67,7 +67,44 @@ class KeyVaultSettingsTest extends TestCase
 
         Http::assertSent(function ($request) use ($rawKey) {
             return str_contains($request->url(), 'generativelanguage.googleapis.com') &&
-                $request['key'] === $rawKey;
+                $request->hasHeader('x-goog-api-key', $rawKey) &&
+                ! str_contains($request->url(), 'key=');
+        });
+    }
+
+    public function test_valid_aq_prefixed_api_key_storage_using_header(): void
+    {
+        $user = User::factory()->create();
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'models' => [
+                    ['name' => 'models/gemini-2.5-flash'],
+                ],
+            ], 200),
+        ]);
+
+        $rawKey = 'AQ.NewAuthKeyFormatFromGoogleStudio9876';
+
+        $response = $this->actingAs($user)->post(route('settings.api-key.store'), [
+            'api_key' => $rawKey,
+            'default_model' => 'gemini-2.5-pro',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $apiKey = ApiKey::where('user_id', $user->id)->first();
+        $this->assertNotNull($apiKey);
+        $this->assertEquals('AQ.N...9876', $apiKey->key_hint);
+        $this->assertTrue($apiKey->is_active);
+        $this->assertEquals('gemini-2.5-pro', $apiKey->default_model);
+        $this->assertEquals($rawKey, Crypt::decryptString($apiKey->encrypted_key));
+
+        Http::assertSent(function ($request) use ($rawKey) {
+            return str_contains($request->url(), 'generativelanguage.googleapis.com') &&
+                $request->hasHeader('x-goog-api-key', $rawKey) &&
+                ! str_contains($request->url(), 'key=');
         });
     }
 
@@ -116,7 +153,7 @@ class KeyVaultSettingsTest extends TestCase
         $this->assertEquals(0, ApiKey::where('user_id', $user->id)->count());
     }
 
-    public function test_malformed_key_without_aiza_prefix_is_rejected_without_calling_gemini(): void
+    public function test_malformed_key_without_valid_prefix_is_rejected_without_calling_gemini(): void
     {
         $user = User::factory()->create();
 
@@ -134,9 +171,10 @@ class KeyVaultSettingsTest extends TestCase
     {
         $user = User::factory()->create();
 
+        $rawKey = 'AIzaSyValidActiveTestingKey1234567890';
         $apiKey = ApiKey::create([
             'user_id' => $user->id,
-            'encrypted_key' => Crypt::encryptString('AIzaSyValidActiveTestingKey1234567890'),
+            'encrypted_key' => Crypt::encryptString($rawKey),
             'key_hint' => 'AIza...7890',
             'default_model' => 'gemini-2.5-flash',
             'is_active' => true,
@@ -155,6 +193,11 @@ class KeyVaultSettingsTest extends TestCase
             'user_id' => $user->id,
             'action' => 'api_key_verified',
         ]);
+
+        Http::assertSent(function ($request) use ($rawKey) {
+            return $request->hasHeader('x-goog-api-key', $rawKey) &&
+                ! str_contains($request->url(), 'key=');
+        });
     }
 
     public function test_test_connection_deactivates_key_when_gemini_rejects(): void
@@ -245,7 +288,7 @@ class KeyVaultSettingsTest extends TestCase
             'https://generativelanguage.googleapis.com/*' => Http::response(['models' => []], 200),
         ]);
 
-        // First key
+        // First key (AIza format)
         $this->actingAs($user)->post(route('settings.api-key.store'), [
             'api_key' => 'AIzaSyFirstOriginalKey12345678901111',
             'default_model' => 'gemini-2.5-flash',
@@ -254,16 +297,16 @@ class KeyVaultSettingsTest extends TestCase
         $this->assertEquals(1, ApiKey::where('user_id', $user->id)->count());
         $this->assertEquals('AIza...1111', ApiKey::where('user_id', $user->id)->first()->key_hint);
 
-        // Replace key
+        // Replace with new AQ. format key
         $this->actingAs($user)->post(route('settings.api-key.store'), [
-            'api_key' => 'AIzaSySecondReplacedKey99999999992222',
+            'api_key' => 'AQ.SecondReplacedKey99999999992222',
             'default_model' => 'gemini-2.5-pro',
         ]);
 
         $this->assertEquals(1, ApiKey::where('user_id', $user->id)->count());
         $updatedKey = ApiKey::where('user_id', $user->id)->first();
-        $this->assertEquals('AIza...2222', $updatedKey->key_hint);
+        $this->assertEquals('AQ.S...2222', $updatedKey->key_hint);
         $this->assertEquals('gemini-2.5-pro', $updatedKey->default_model);
-        $this->assertEquals('AIzaSySecondReplacedKey99999999992222', Crypt::decryptString($updatedKey->encrypted_key));
+        $this->assertEquals('AQ.SecondReplacedKey99999999992222', Crypt::decryptString($updatedKey->encrypted_key));
     }
 }

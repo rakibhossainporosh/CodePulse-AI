@@ -146,11 +146,14 @@ class ProcessCodeReviewJob implements ShouldQueue
         // Sanitize error message to ensure API key is never exposed
         $safeMessage = 'AI analysis could not be completed. The Gemini API service was temporarily unavailable or rate limited. Please try again.';
 
-        if ($exception && ! str_contains(strtolower($exception->getMessage()), 'aiza')) {
+        if ($exception) {
             $rawMsg = $exception->getMessage();
-            // Filter out query strings or potential key leaks
-            $cleanMsg = preg_replace('/key=[a-zA-Z0-9_\-]+/', 'key=***', $rawMsg);
-            $safeMessage = substr($cleanMsg, 0, 250);
+            $lower = strtolower($rawMsg);
+            if (! str_contains($lower, 'aiza') && ! str_contains($lower, 'aq.')) {
+                // Filter out query strings or potential key leaks
+                $cleanMsg = preg_replace('/key=[a-zA-Z0-9_\.\-]+/', 'key=***', $rawMsg);
+                $safeMessage = substr($cleanMsg, 0, 250);
+            }
         }
 
         $this->review->update([

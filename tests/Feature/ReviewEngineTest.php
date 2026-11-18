@@ -260,6 +260,13 @@ class ReviewEngineTest extends TestCase
         $this->assertEquals('Direct SQL Injection Vulnerability', $criticalFinding->title);
         $this->assertEquals(1, $criticalFinding->line_start);
         $this->assertStringContainsString('DB::select', $criticalFinding->suggested_fix);
+
+        // Verify request was sent with x-goog-api-key header and without key in query string
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'generateContent') &&
+                $request->hasHeader('x-goog-api-key') &&
+                ! str_contains($request->url(), 'key=');
+        });
     }
 
     public function test_job_failure_handler_marks_review_failed_without_exposing_api_key(): void
@@ -272,7 +279,7 @@ class ReviewEngineTest extends TestCase
             'status' => ReviewStatus::PROCESSING,
         ]);
 
-        $exception = new \RuntimeException('Failed request to https://generativelanguage.googleapis.com?key=AIzaSySecretRawKeyDoNotExpose123');
+        $exception = new \RuntimeException('Failed request to https://generativelanguage.googleapis.com with key=AQ.SecretRawKeyDoNotExpose123');
 
         $job = new ProcessCodeReviewJob($review);
         $job->failed($exception);
@@ -280,7 +287,7 @@ class ReviewEngineTest extends TestCase
         $review->refresh();
         $this->assertEquals(ReviewStatus::FAILED, $review->status);
         $this->assertNotNull($review->error_message);
-        $this->assertStringNotContainsString('AIzaSySecretRawKeyDoNotExpose123', $review->error_message);
+        $this->assertStringNotContainsString('AQ.SecretRawKeyDoNotExpose123', $review->error_message);
     }
 
     public function test_status_endpoint_returns_json_progress(): void

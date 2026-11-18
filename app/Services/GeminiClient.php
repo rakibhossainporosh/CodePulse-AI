@@ -60,8 +60,9 @@ class GeminiClient
             $response = Http::timeout(120)
                 ->withHeaders([
                     'Content-Type' => 'application/json',
+                    'x-goog-api-key' => $rawApiKey,
                 ])
-                ->post($endpoint . '?key=' . urlencode($rawApiKey), $payload);
+                ->post($endpoint, $payload);
         } catch (Exception $e) {
             // Never log the raw key or the query string with key
             Log::error('Gemini API request failed due to connection/timeout error', [
