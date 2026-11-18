@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -30,6 +31,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/api-key/test', [ApiKeyController::class, 'test'])->name('settings.api-key.test');
     Route::patch('/settings/api-key/model', [ApiKeyController::class, 'updateModel'])->name('settings.api-key.model');
     Route::delete('/settings/api-key', [ApiKeyController::class, 'destroy'])->name('settings.api-key.destroy');
+
+    // Code Reviews (Rate limited to 10/min/user per PRD §7.3)
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
+    Route::post('/reviews', [ReviewController::class, 'store'])
+        ->middleware('throttle:code-review')
+        ->name('reviews.store');
+    Route::get('/reviews/{review}', [ReviewController::class, 'show'])->name('reviews.show');
+    Route::get('/reviews/{review}/status', [ReviewController::class, 'status'])->name('reviews.status');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
 require __DIR__.'/auth.php';
