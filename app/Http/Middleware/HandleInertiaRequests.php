@@ -29,10 +29,19 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'has_api_key' => $user ? (bool) $user->apiKey?->is_active : false,
+                'api_key_hint' => $user ? $user->apiKey?->key_hint : null,
+                'default_model' => $user ? ($user->apiKey?->default_model ?? 'gemini-2.5-flash') : 'gemini-2.5-flash',
+            ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
         ];
     }

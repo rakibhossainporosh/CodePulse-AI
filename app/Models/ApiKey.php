@@ -14,6 +14,7 @@ class ApiKey extends Model
         'user_id',
         'encrypted_key',
         'key_hint',
+        'default_model',
         'is_active',
         'last_verified_at',
     ];
