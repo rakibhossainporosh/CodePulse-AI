@@ -145,6 +145,29 @@ class ReviewController extends Controller
     }
 
     /**
+     * Retry a failed review.
+     */
+    public function retry(Review $review): RedirectResponse
+    {
+        $this->authorize('update', $review);
+
+        $user = auth()->user();
+
+        if (! $user->apiKey || ! $user->apiKey->is_active) {
+            return redirect()->route('settings')->with('error', 'Please configure and verify your Google Gemini API Key before retrying code reviews.');
+        }
+
+        $review->update([
+            'status' => ReviewStatus::PENDING,
+            'error_message' => null,
+        ]);
+
+        ProcessCodeReviewJob::dispatch($review);
+
+        return back()->with('success', 'Code review re-queued! Analysis will begin shortly.');
+    }
+
+    /**
      * Delete a review.
      */
     public function destroy(Review $review): RedirectResponse

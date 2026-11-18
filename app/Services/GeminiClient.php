@@ -10,6 +10,7 @@ use RuntimeException;
 class GeminiClient
 {
     private const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+    public const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
 
     public function __construct(
         protected PromptBuilder $promptBuilder
@@ -17,8 +18,9 @@ class GeminiClient
 
     /**
      * Call Gemini generateContent API with structured schema and return parsed result.
+     * Automatically falls back to gemini-3.5-flash-lite on 429 or 503 before failing.
      *
-     * @return array{scores: array, findings: array, tokens_used: int}
+     * @return array{scores: array, findings: array, tokens_used: int, model_used: string}
      *
      * @throws RuntimeException
      */
@@ -28,6 +30,51 @@ class GeminiClient
         string $language,
         array $focusAreas,
         string $model = 'gemini-3.8-flash'
+    ): array {
+        try {
+            $result = $this->executeGenerateContent($rawApiKey, $sourceCode, $language, $focusAreas, $model);
+            $result['model_used'] = $model;
+
+            return $result;
+        } catch (RuntimeException $e) {
+            $status = $e->getCode();
+
+            // Automatic fallback to gemini-3.5-flash-lite on 429 or 503
+            if ($model !== self::FALLBACK_MODEL && in_array($status, [429, 503])) {
+                Log::warning("Gemini model [{$model}] returned HTTP {$status}. Falling back to [" . self::FALLBACK_MODEL . "].", [
+                    'original_model' => $model,
+                    'fallback_model' => self::FALLBACK_MODEL,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $fallbackResult = $this->executeGenerateContent(
+                    $rawApiKey,
+                    $sourceCode,
+                    $language,
+                    $focusAreas,
+                    self::FALLBACK_MODEL
+                );
+
+                $fallbackResult['model_used'] = self::FALLBACK_MODEL;
+
+                return $fallbackResult;
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Execute HTTP POST to Gemini generateContent endpoint.
+     *
+     * @throws RuntimeException
+     */
+    protected function executeGenerateContent(
+        string $rawApiKey,
+        string $sourceCode,
+        string $language,
+        array $focusAreas,
+        string $model
     ): array {
         $endpoint = self::BASE_URL . '/' . $model . ':generateContent';
 
@@ -64,19 +111,19 @@ class GeminiClient
                 ])
                 ->post($endpoint, $payload);
         } catch (Exception $e) {
-            // Never log the raw key or the query string with key
             Log::error('Gemini API request failed due to connection/timeout error', [
                 'model' => $model,
                 'error' => $e->getMessage(),
             ]);
 
-            throw new RuntimeException('Connection to Google Gemini API timed out or failed. Retrying...', 0, $e);
+            throw new RuntimeException("Connection to Google Gemini API timed out or failed ({$model}): " . $e->getMessage(), 0, $e);
         }
 
         if (! $response->successful()) {
             $status = $response->status();
-            $errorJson = $response->json();
-            $errorMessage = $errorJson['error']['message'] ?? 'Unknown Gemini API error';
+            $errorMessage = $response->json('error.message')
+                ?? $response->json('error')
+                ?? ('HTTP ' . $status . ' ' . $response->body());
 
             Log::warning('Gemini API returned non-success response', [
                 'status' => $status,
@@ -85,10 +132,10 @@ class GeminiClient
             ]);
 
             if (in_array($status, [429, 500, 502, 503, 504])) {
-                throw new RuntimeException("Gemini API rate limited or unavailable (Status {$status}). Retrying...", $status);
+                throw new RuntimeException("Gemini API rate limited or unavailable (Status {$status}): {$errorMessage}", $status);
             }
 
-            // Client errors like 400, 401, 403
+            // Client errors like 400, 401, 403, 404
             throw new RuntimeException("Gemini API error ({$status}): {$errorMessage}", $status);
         }
 

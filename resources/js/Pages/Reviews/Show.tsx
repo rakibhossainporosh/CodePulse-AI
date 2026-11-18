@@ -21,6 +21,7 @@ import {
     ArrowLeft,
     Share2,
     Cpu,
+    RefreshCw,
 } from 'lucide-react';
 
 interface Finding {
@@ -63,6 +64,18 @@ export default function Show({ review }: Props) {
     const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
     const [copiedFixId, setCopiedFixId] = useState<number | null>(null);
     const [copiedReport, setCopiedReport] = useState(false);
+    const [retrying, setRetrying] = useState(false);
+
+    const handleRetry = () => {
+        setRetrying(true);
+        router.post(
+            route('reviews.retry', review.id),
+            {},
+            {
+                onFinish: () => setRetrying(false),
+            }
+        );
+    };
 
     // Auto-polling for pending / processing status
     useEffect(() => {
@@ -262,14 +275,26 @@ export default function Show({ review }: Props) {
 
                 {/* Status Alert if Failed */}
                 {review.status === 'failed' && (
-                    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200 shadow-xs flex items-start gap-3">
-                        <XCircle className="h-5 w-5 text-rose-600 mt-0.5 shrink-0" />
-                        <div>
-                            <h4 className="text-sm font-semibold">Analysis Failed</h4>
-                            <p className="text-xs text-rose-700 dark:text-rose-300 mt-1">
-                                {review.error_message || 'The review could not be completed.'}
-                            </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200 shadow-xs">
+                        <div className="flex items-start gap-3">
+                            <XCircle className="h-5 w-5 text-rose-600 mt-0.5 shrink-0" />
+                            <div>
+                                <h4 className="text-sm font-semibold">Analysis Failed</h4>
+                                <p className="text-xs text-rose-700 dark:text-rose-300 mt-0.5">
+                                    {review.error_message || 'The review could not be completed.'}
+                                </p>
+                            </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={handleRetry}
+                            disabled={retrying}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-rose-500 disabled:opacity-50 transition-colors shrink-0"
+                        >
+                            <RefreshCw className={`h-3.5 w-3.5 ${retrying ? 'animate-spin' : ''}`} />
+                            {retrying ? 'Re-queueing...' : 'Retry Review'}
+                        </button>
                     </div>
                 )}
 

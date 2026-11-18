@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:code-review')
         ->name('reviews.store');
     Route::get('/reviews/{review}', [ReviewController::class, 'show'])->name('reviews.show');
+    Route::post('/reviews/{review}/retry', [ReviewController::class, 'retry'])->name('reviews.retry');
     Route::get('/reviews/{review}/status', [ReviewController::class, 'status'])->name('reviews.status');
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });

@@ -309,4 +309,160 @@ class ReviewEngineTest extends TestCase
             'overall_score' => null,
         ]);
     }
+
+    public function test_user_can_retry_failed_review(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->createActiveApiKey($user);
+
+        $review = Review::create([
+            'user_id' => $user->id,
+            'language' => 'PHP',
+            'source_code' => '<?php echo "Retry test"; ?>',
+            'status' => ReviewStatus::FAILED,
+            'error_message' => 'Previous temporary error',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('reviews.retry', $review));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $review->refresh();
+        $this->assertEquals(ReviewStatus::PENDING, $review->status);
+        $this->assertNull($review->error_message);
+
+        Queue::assertPushed(ProcessCodeReviewJob::class, function ($job) use ($review) {
+            return $job->review->id === $review->id;
+        });
+    }
+
+    public function test_retryable_exception_leaves_status_as_processing_during_attempts(): void
+    {
+        $user = User::factory()->create();
+        $this->createActiveApiKey($user);
+
+        $review = Review::create([
+            'user_id' => $user->id,
+            'language' => 'PHP',
+            'source_code' => '<?php echo "429 test"; ?>',
+            'status' => ReviewStatus::PENDING,
+        ]);
+
+        // Mock 429 Too Many Requests
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'error' => ['message' => 'Resource exhausted'],
+            ], 429),
+        ]);
+
+        $keyVaultService = app(KeyVaultService::class);
+        $geminiClient = app(GeminiClient::class);
+
+        $job = new ProcessCodeReviewJob($review);
+
+        try {
+            $job->handle($keyVaultService, $geminiClient);
+            $this->fail('Expected retryable RuntimeException was not thrown');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('Gemini API rate limited or unavailable', $e->getMessage());
+        }
+
+        $review->refresh();
+        // Crucial test: Status must remain 'processing' so frontend polling continues!
+        $this->assertEquals(ReviewStatus::PROCESSING, $review->status);
+    }
+
+    public function test_gemini_client_automatically_falls_back_to_flash_lite_on_503_or_429(): void
+    {
+        $user = User::factory()->create();
+        $this->createActiveApiKey($user);
+
+        $review = Review::create([
+            'user_id' => $user->id,
+            'language' => 'PHP',
+            'source_code' => '<?php echo "Fallback test"; ?>',
+            'focus_areas' => ['performance'],
+            'model_used' => 'gemini-3.8-flash',
+            'status' => ReviewStatus::PENDING,
+        ]);
+
+        // Mock: gemini-3.8-flash returns 503, gemini-3.5-flash-lite succeeds
+        Http::fake([
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent' => Http::response([
+                'error' => ['message' => 'The model is overloaded. Please try again later.'],
+            ], 503),
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'text' => json_encode([
+                                        'scores' => [
+                                            'security' => 90,
+                                            'performance' => 90,
+                                            'maintainability' => 90,
+                                        ],
+                                        'findings' => [],
+                                    ]),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+                'usageMetadata' => [
+                    'totalTokenCount' => 150,
+                ],
+            ], 200),
+        ]);
+
+        $keyVaultService = app(KeyVaultService::class);
+        $geminiClient = app(GeminiClient::class);
+
+        $job = new ProcessCodeReviewJob($review);
+        $job->handle($keyVaultService, $geminiClient);
+
+        $review->refresh();
+
+        $this->assertEquals(ReviewStatus::COMPLETED, $review->status);
+        $this->assertEquals('gemini-3.5-flash-lite', $review->model_used);
+        $this->assertEquals(90, $review->overall_score);
+        $this->assertEquals(150, $review->tokens_used);
+    }
+
+    public function test_gemini_client_includes_actual_api_error_message_on_failure(): void
+    {
+        $user = User::factory()->create();
+        $this->createActiveApiKey($user);
+
+        $review = Review::create([
+            'user_id' => $user->id,
+            'language' => 'PHP',
+            'source_code' => '<?php echo "Detailed error test"; ?>',
+            'focus_areas' => ['performance'],
+            'model_used' => 'gemini-3.8-flash',
+            'status' => ReviewStatus::PENDING,
+        ]);
+
+        Http::fake([
+            'https://generativelanguage.googleapis.com/*' => Http::response([
+                'error' => ['message' => 'API quota exceeded for project 123456'],
+            ], 429),
+        ]);
+
+        $keyVaultService = app(KeyVaultService::class);
+        $geminiClient = app(GeminiClient::class);
+
+        $job = new ProcessCodeReviewJob($review);
+
+        try {
+            $job->handle($keyVaultService, $geminiClient);
+            $this->fail('Expected exception was not thrown');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('API quota exceeded for project 123456', $e->getMessage());
+        }
+    }
 }

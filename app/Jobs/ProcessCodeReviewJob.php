@@ -52,12 +52,7 @@ class ProcessCodeReviewJob implements ShouldQueue
         $rawApiKey = $keyVaultService->decrypt($user);
 
         if (! $rawApiKey) {
-            $this->review->update([
-                'status' => ReviewStatus::FAILED,
-                'error_message' => 'No active Gemini API key found for this user. Please configure your key in Settings.',
-            ]);
-
-            return;
+            throw new \RuntimeException('No active Gemini API key found for this user. Please configure your key in Settings.');
         }
 
         $model = $this->review->model_used ?: ($user->apiKey?->default_model ?? 'gemini-3.8-flash');
@@ -75,6 +70,7 @@ class ProcessCodeReviewJob implements ShouldQueue
         $scores = $result['scores'];
         $findings = $result['findings'];
         $tokensUsed = $result['tokens_used'];
+        $actualModel = $result['model_used'] ?? $model;
 
         // Weighted Overall Score Formula (PRD §7.3)
         // overall_score = round(($security_score * 0.35) + ($performance_score * 0.35) + ($maintainability_score * 0.30))
@@ -84,7 +80,7 @@ class ProcessCodeReviewJob implements ShouldQueue
 
         $overallScore = (int) round(($secScore * 0.35) + ($perfScore * 0.35) + ($maintScore * 0.30));
 
-        DB::transaction(function () use ($overallScore, $perfScore, $secScore, $maintScore, $tokensUsed, $findings) {
+        DB::transaction(function () use ($overallScore, $perfScore, $secScore, $maintScore, $tokensUsed, $findings, $actualModel) {
             // Delete any existing findings if re-processing
             $this->review->findings()->delete();
 
@@ -123,6 +119,7 @@ class ProcessCodeReviewJob implements ShouldQueue
             // Update review record
             $this->review->update([
                 'status' => ReviewStatus::COMPLETED,
+                'model_used' => $actualModel,
                 'overall_score' => $overallScore,
                 'performance_score' => $perfScore,
                 'security_score' => $secScore,
